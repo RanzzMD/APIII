@@ -115,6 +115,7 @@ router.get("/apilist", (req, res) => {
   res.json({ categories });
 });
 
+app.use(fileUpload());
 app.use("/api", router);
 
 app.get("/script.js", (req, res) => {
