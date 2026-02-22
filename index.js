@@ -12,9 +12,9 @@ For setting API name etc
 */
 const title = "RANZZ API";
 const favicon =
-  "https://raw.githubusercontent.com/RamzzzMD/tes-aja-lah/refs/heads/main/ChatGPT%20Image%20Feb%2022%2C%202026%2C%2010_35_52%20AM.png";
-const logo =
   "https://raw.githubusercontent.com/RamzzzMD/tes-aja-lah/refs/heads/main/reply.jpg";
+const logo =
+  "https://raw.githubusercontent.com/RamzzzMD/tes-aja-lah/refs/heads/main/ChatGPT%20Image%20Feb%2022%2C%202026%2C%2010_35_52%20AM.png";
 const headertitle = "REST API";
 const headerdescription = "Kumpulan API Endpoint yang mungkin berguna.";
 const footer = "© RANZZ";
