@@ -1,13 +1,11 @@
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
-const fileUpload = require('express-fileupload');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname)));
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 /*
 For setting API name etc
@@ -115,7 +113,6 @@ router.get("/apilist", (req, res) => {
   res.json({ categories });
 });
 
-app.use(fileUpload());
 app.use("/api", router);
 
 app.get("/script.js", (req, res) => {
@@ -309,34 +306,6 @@ app.get("/docs", (req, res) => {
                 </svg>
             </div>
         </div>
-
-<div class="mb-12 border-2 border-white light-mode:border-black p-6 raised-shadow bg-transparent">
-    <div class="flex items-center gap-3 mb-4">
-        <span class="text-xl">📤</span>
-        <h2 class="text-sm font-bold uppercase tracking-widest">Upload Media Tool</h2>
-    </div>
-    
-    <form id="uploadForm" class="space-y-4">
-        <div class="relative border-2 border-dashed border-white light-mode:border-black p-8 text-center hover:bg-white hover:bg-opacity-5 transition-all cursor-pointer">
-            <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-            <div id="fileLabel" class="text-xs opacity-70">
-                Klik atau tarik file ke sini untuk mengunggah
-            </div>
-        </div>
-        
-        <div class="flex gap-3">
-            <button type="submit" id="uploadBtn" class="flex-1 border-2 border-white light-mode:border-black py-3 text-xs font-bold hover:bg-white hover:text-black transition-all uppercase">
-                Unggah ke Server
-            </button>
-            <button type="button" id="clearUpload" class="px-4 border-2 border-white light-mode:border-black hover:bg-api-error transition-all">
-                🗑️
-            </button>
-        </div>
-    </form>
-    
-    <div id="uploadStatus" class="mt-4 hidden p-3 border border-white light-mode:border-black text-[10px] font-mono break-all bg-white bg-opacity-5">
-        </div>
-</div>
 
         <div id="noResults" class="text-center py-12 hidden">
             <div class="text-4xl mb-2">🔍</div>
