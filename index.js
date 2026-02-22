@@ -181,20 +181,6 @@ app.get("/", (req, res) => {
                     </a>
                 </div>
             </div>
-            
-            <div class="mb-8 p-4 border-2 border-white light-mode:border-black raised-shadow bg-transparent">
-    <h3 class="text-xs font-bold mb-3 uppercase tracking-widest text-center">Upload Media</h3>
-    <form id="uploadForm" class="space-y-4">
-        <div class="relative border-2 border-dashed border-gray-500 p-4 text-center hover:border-white transition-colors">
-            <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-            <div id="fileLabel" class="text-xs opacity-70">Klik atau seret file ke sini</div>
-        </div>
-        <button type="submit" class="w-full border-2 border-white py-2 text-xs font-bold hover:bg-white hover:text-black transition-all uppercase">
-            Upload ke Server
-        </button>
-    </form>
-    <div id="uploadStatus" class="mt-3 text-[10px] text-center font-mono break-all text-api-green"></div>
-</div>
 
             <div id="socialContainer" class="flex flex-wrap justify-center gap-2">
                 <div id="socialLoading" class="text-center py-2 w-full text-sm">
@@ -321,6 +307,34 @@ app.get("/docs", (req, res) => {
                 </svg>
             </div>
         </div>
+
+<div class="mb-12 border-2 border-white light-mode:border-black p-6 raised-shadow bg-transparent">
+    <div class="flex items-center gap-3 mb-4">
+        <span class="text-xl">📤</span>
+        <h2 class="text-sm font-bold uppercase tracking-widest">Upload Media Tool</h2>
+    </div>
+    
+    <form id="uploadForm" class="space-y-4">
+        <div class="relative border-2 border-dashed border-white light-mode:border-black p-8 text-center hover:bg-white hover:bg-opacity-5 transition-all cursor-pointer">
+            <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+            <div id="fileLabel" class="text-xs opacity-70">
+                Klik atau tarik file ke sini untuk mengunggah
+            </div>
+        </div>
+        
+        <div class="flex gap-3">
+            <button type="submit" id="uploadBtn" class="flex-1 border-2 border-white light-mode:border-black py-3 text-xs font-bold hover:bg-white hover:text-black transition-all uppercase">
+                Unggah ke Server
+            </button>
+            <button type="button" id="clearUpload" class="px-4 border-2 border-white light-mode:border-black hover:bg-api-error transition-all">
+                🗑️
+            </button>
+        </div>
+    </form>
+    
+    <div id="uploadStatus" class="mt-4 hidden p-3 border border-white light-mode:border-black text-[10px] font-mono break-all bg-white bg-opacity-5">
+        </div>
+</div>
 
         <div id="noResults" class="text-center py-12 hidden">
             <div class="text-4xl mb-2">🔍</div>
