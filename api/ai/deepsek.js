@@ -87,8 +87,8 @@ async function getDeepSeekResponse(prompt) {
         // 1. Login (Menggunakan kredensial statis sesuai scriptmu atau bisa dipindah ke query)
         const deviceId = utils.generateDeviceId();
         const loginRes = await axios.post(`${CONFIG.BASE_URL}/users/login`, {
-            email: "shannmoderz@gmail.com", // Ganti jika perlu
-            password: "Dhaav100", 
+            email: "ranzz7905@gmail.com", // Ganti jika perlu
+            password: "Ramdanml008", 
             device_id: deviceId, 
             os: 'android'
         }, { headers: CONFIG.HEADERS });
