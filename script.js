@@ -802,26 +802,57 @@ window.addEventListener('beforeunload', function() {
     }
 });
 
-document.getElementById('uploadForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const fileInput = document.getElementById('fileInput');
-    const status = document.getElementById('uploadStatus');
-    
-    if (!fileInput.files[0]) return alert("Pilih file dulu, Ranzz!");
+document.addEventListener('DOMContentLoaded', function() {
+    // ... kode yang sudah ada ...
 
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
+    const uploadForm = document.getElementById('githubUploadForm');
+    const statusDiv = document.getElementById('uploadStatus');
+    const uploadBtn = document.getElementById('uploadBtn');
 
-    status.innerText = "Sedang mengunggah...";
-    
-    try {
-        const response = await fetch('/api/tools/upload', {
-            method: 'POST',
-            body: formData
-        });
-        const result = await response.json();
-        status.innerText = "Sukses: " + result.fileInfo.path;
-    } catch (err) {
-        status.innerText = "Gagal mengunggah file.";
-    }
+    uploadForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fileInput = document.getElementById('mediaFile');
+        
+        if (!fileInput.files[0]) return;
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        // Loading State
+        statusDiv.classList.remove('hidden');
+        statusDiv.innerHTML = `<span class="text-yellow-400">⚡ PROCESSING: Mengunggah file ke database GitHub...</span>`;
+        uploadBtn.disabled = true;
+        uploadBtn.innerText = "WAIT...";
+
+        try {
+            // Pastikan path ini sesuai dengan letak file scrape upload kamu
+            const response = await fetch('/api/tools/upload', { 
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+
+            if (result.status) {
+                statusDiv.innerHTML = `
+                    <p class="text-green-400 font-bold mb-2">✅ UPLOAD SUCCESS!</p>
+                    <div class="p-3 border border-dashed border-green-400 bg-green-400/5">
+                        <p class="text-white mb-2">RAW URL:</p>
+                        <code class="break-all text-blue-300 text-[10px]">${result.url}</code>
+                    </div>
+                    <div class="mt-3 flex gap-2">
+                        <button onclick="copyText('${result.url}', 'URL')" class="border border-white px-3 py-1 hover:bg-white hover:text-black">COPY LINK</button>
+                        <a href="${result.url}" target="_blank" class="border border-white px-3 py-1 hover:bg-white hover:text-black text-center">VIEW FILE</a>
+                    </div>
+                `;
+            } else {
+                throw new Error(result.error || "Gagal mengunggah");
+            }
+        } catch (err) {
+            statusDiv.innerHTML = `<span class="text-red-500">❌ ERROR: ${err.message}</span>`;
+        } finally {
+            uploadBtn.disabled = false;
+            uploadBtn.innerText = "UPLOAD";
+        }
+    });
 });
