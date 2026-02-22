@@ -801,3 +801,27 @@ window.addEventListener('beforeunload', function() {
         batteryMonitor = null;
     }
 });
+
+document.getElementById('uploadForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('uploadStatus');
+    
+    if (!fileInput.files[0]) return alert("Pilih file dulu, Ranzz!");
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    status.innerText = "Sedang mengunggah...";
+    
+    try {
+        const response = await fetch('/api/tools/upload', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        status.innerText = "Sukses: " + result.fileInfo.path;
+    } catch (err) {
+        status.innerText = "Gagal mengunggah file.";
+    }
+});
