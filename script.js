@@ -823,7 +823,7 @@ document.addEventListener('DOMContentLoaded', function() {
         statusDiv.innerHTML = `<span class="text-yellow-400">⚡ PROCESSING: Mengunggah file ke database GitHub...</span>`;
         uploadBtn.disabled = true;
         uploadBtn.innerText = "WAIT...";
-
+        
         try {
     const response = await fetch('/api/tools/upload', { // Pastikan path ini benar!
         method: 'POST',
