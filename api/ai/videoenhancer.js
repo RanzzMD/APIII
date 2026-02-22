@@ -125,7 +125,7 @@ router.all('/', upload.single('video'), async (req, res) => {
         const jobId = await createJob(cdnUrl, resolution);
         const finalResult = await pollJob(jobId);
 
-        // 4. Cleanup file temporary
+        // 4. Cleanup file temporary (Perbaikan Syntax di sini)
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
@@ -140,5 +140,13 @@ router.all('/', upload.single('video'), async (req, res) => {
         });
 
     } catch (e) {
+        // Perbaikan Syntax Cleanup di blok catch
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-        if (req.file && fs.existsSync(req.file
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        
+        console.error("Enhancer Error:", e.message);
+        return res.status(500).json({ status: false, creator: "Ranzz", error: e.message });
+    }
+});
+
+module.exports = router;
