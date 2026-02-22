@@ -5,107 +5,154 @@ const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const multer = require('multer');
 
-/**
- * SCRAPER LOGIC - AI Video Enhancer
- * Author: Ranzz
- */
-
+// --- CONFIG & CONSTANTS ---
 const UA = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36';
 const API = 'https://api.unblurimage.ai/api/upscaler';
 
+// Konfigurasi Multer untuk penyimpanan sementara
+const upload = multer({ dest: 'temp/' });
+
+/**
+ * UTILS - Generate Serial Produk
+ */
 function productserial() {
     const raw = [UA, process.platform, process.arch, Date.now(), Math.random()].join('|');
     return crypto.createHash('md5').update(raw).digest('hex');
 }
-
 const product = productserial();
 
-async function videoEnhancerScraper(videoPath, resolution = '4k') {
-    try {
-        // 1. Get Upload URL
-        const formUpload = new FormData();
-        formUpload.append('video_file_name', path.basename(videoPath));
-        const upRes = await axios.post(`${API}/v1/ai-video-enhancer/upload-video`, formUpload, {
-            headers: { ...formUpload.getHeaders(), 'user-agent': UA }
-        });
-        const uploadData = upRes.data.result;
+/**
+ * SCRAPER LOGIC - AI Video Enhancer
+ */
 
-        // 2. Put to OSS
-        const stream = fs.createReadStream(videoPath);
-        await axios.put(uploadData.url, stream, {
-            headers: { 'content-type': 'video/mp4' },
-            maxBodyLength: Infinity,
-            maxContentLength: Infinity
-        });
+// 1. Inisialisasi Upload
+async function uploadvid(filePath) {
+    const form = new FormData();
+    form.append('video_file_name', path.basename(filePath));
 
-        // 3. Create Job
-        const cdnUrl = 'https://cdn.unblurimage.ai/' + uploadData.object_name;
-        const formJob = new FormData();
-        formJob.append('original_video_file', cdnUrl);
-        formJob.append('resolution', resolution);
-        formJob.append('is_preview', 'false');
-
-        const jobRes = await axios.post(`${API}/v2/ai-video-enhancer/create-job`, formJob, {
-            headers: { ...formJob.getHeaders(), 'user-agent': UA, 'product-serial': product }
-        });
-
-        if (jobRes.data?.code !== 100000) throw new Error("Gagal membuat job: " + JSON.stringify(jobRes.data));
-        const jobId = jobRes.data.result.job_id;
-
-        // 4. Polling Job (Max 5 menit)
-        let attempts = 0;
-        while (attempts < 60) {
-            const check = await axios.get(`${API}/v2/ai-video-enhancer/get-job/${jobId}`, {
-                headers: { 'user-agent': UA, 'product-serial': product }
-            });
-
-            if (check.data.code === 100000 && check.data.result?.output_url) {
-                return { job_id: jobId, input_url: check.data.result.input_url, output_url: check.data.result.output_url };
-            }
-            if (check.data.code !== 300010) throw new Error("Job Error: " + JSON.stringify(check.data));
-
-            await new Promise(r => setTimeout(r, 5000)); // Tunggu 5 detik
-            attempts++;
+    const res = await axios.post(`${API}/v1/ai-video-enhancer/upload-video`, form, {
+        headers: {
+            ...form.getHeaders(),
+            'user-agent': UA,
+            origin: 'https://unblurimage.ai',
+            referer: 'https://unblurimage.ai/'
         }
-        throw new Error("Proses timeout (Terlalu lama)");
-    } catch (error) {
-        throw error;
+    });
+    return res.data.result;
+}
+
+// 2. Kirim Stream ke OSS
+async function putoOss(uploadUrl, filePath) {
+    const stream = fs.createReadStream(filePath);
+    await axios.put(uploadUrl, stream, {
+        headers: { 'content-type': 'video/mp4' },
+        maxBodyLength: Infinity,
+        maxContentLength: Infinity
+    });
+}
+
+// 3. Buat Job Processing
+async function createJob(originalVideoUrl, resolution = '4k', preview = false) {
+    const form = new FormData();
+    form.append('original_video_file', originalVideoUrl);
+    form.append('resolution', resolution);
+    form.append('is_preview', preview ? 'true' : 'false');
+
+    const res = await axios.post(`${API}/v2/ai-video-enhancer/create-job`, form, {
+        headers: {
+            ...form.getHeaders(),
+            'user-agent': UA,
+            origin: 'https://unblurimage.ai',
+            referer: 'https://unblurimage.ai/',
+            'product-serial': product
+        }
+    });
+
+    if (res.data?.code !== 100000) throw new Error(JSON.stringify(res.data));
+    return res.data.result.job_id;
+}
+
+// 4. Cek Status Job (Polling)
+async function pollJob(jobId, interval = 5000) {
+    let attempts = 0;
+    while (attempts < 100) { // Max polling sekitar 8-10 menit
+        const res = await axios.get(`${API}/v2/ai-video-enhancer/get-job/${jobId}`, {
+            headers: {
+                'user-agent': UA,
+                origin: 'https://unblurimage.ai',
+                referer: 'https://unblurimage.ai/',
+                'product-serial': product
+            }
+        });
+
+        if (res.data.code === 100000 && res.data.result?.output_url) {
+            return res.data.result;
+        }
+
+        if (res.data.code !== 300010) { // 300010 biasanya kode "masih diproses"
+            throw new Error(JSON.stringify(res.data));
+        }
+
+        await new Promise(r => setTimeout(r, interval));
+        attempts++;
     }
+    throw new Error('Proses Timeout');
 }
 
 /**
- * ENDPOINT API
- * Base URL: /api/video-enhance?text=URL_VIDEO_MP4
+ * ENDPOINT - METHOD POST (Upload Video)
+ * Field Name: video
  */
-router.get('/', async (req, res) => {
-    const text = req.query.text; // URL Video Input
-    if (!text) return res.status(400).json({ creator: "Ranzz", error: "Masukkan parameter 'text' (URL Video MP4)" });
+router.post('/', upload.single('video'), async (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ 
+            creator: "Ranzz", 
+            error: "Tidak ada file video yang diunggah (Gunakan field: video)" 
+        });
+    }
 
-    const tempPath = path.join(__dirname, `temp_${Date.now()}.mp4`);
+    const videoPath = req.file.path;
+    const resolution = req.query.resolution || '4k';
 
     try {
-        // Download video ke lokal sementara
-        const response = await axios.get(text, { responseType: 'stream' });
-        const writer = fs.createWriteStream(tempPath);
-        response.data.pipe(writer);
+        // Step 1: Upload Init
+        const uploadData = await uploadvid(videoPath);
 
-        await new Promise((resolve, reject) => {
-            writer.on('finish', resolve);
-            writer.on('error', reject);
+        // Step 2: Upload Real File ke OSS
+        await putoOss(uploadData.url, videoPath);
+
+        // Step 3: Jalankan AI Job
+        const cdnUrl = 'https://cdn.unblurimage.ai/' + uploadData.object_name;
+        const jobId = await createJob(cdnUrl, resolution);
+
+        // Step 4: Tunggu Hasil (Polling)
+        const finalResult = await pollJob(jobId);
+
+        // Hapus file sementara setelah selesai
+        fs.unlinkSync(videoPath);
+
+        return res.json({
+            status: true,
+            creator: "Ranzz",
+            result: {
+                job_id: jobId,
+                input_url: finalResult.input_url,
+                output_url: finalResult.output_url
+            }
         });
 
-        const result = await videoEnhancerScraper(tempPath);
-
-        // Hapus file temp setelah selesai
-        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
-
-        return res.json({ status: true, creator: "Ranzz", result });
-
     } catch (e) {
-        if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+        // Pastikan file temp terhapus meski terjadi error
+        if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
+        
         console.error("Enhancer Error:", e.message);
-        return res.status(500).json({ status: false, creator: "Ranzz", error: e.message });
+        return res.status(500).json({ 
+            status: false, 
+            creator: "Ranzz", 
+            error: e.message 
+        });
     }
 });
 
