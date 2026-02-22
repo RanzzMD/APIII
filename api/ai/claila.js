@@ -3,80 +3,87 @@ const router = express.Router();
 const axios = require('axios');
 
 /**
- * CORE LOGIC - Claila Unichat Scraper
- * Mendukung berbagai model: chatgpt41mini, chatgpt, chatgpto1p, claude, gemini, mistral, grok
- * Author: RANZZ
+ * CORE LOGIC - Claila Unichat Scraper (FIXED)
+ * Creator: RANZZ
  */
 
-const models = [
-    "chatgpt41mini", "chatgpt", "chatgpto1p", 
-    "claude", "gemini", "mistral", "grok"
-];
+const UA = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Mobile Safari/537.36";
 
 async function getCsrfToken() {
-    const res = await axios.get("https://app.claila.com/api/v2/getcsrftoken", {
-        headers: {
-            "authority": "app.claila.com",
-            "accept": "*/*",
-            "origin": "https://www.claila.com",
-            "referer": "https://www.claila.com/",
-            "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36"
-        }
-    });
-    return res.data;
+    try {
+        const res = await axios.get("https://app.claila.com/api/v2/getcsrftoken", {
+            headers: {
+                "authority": "app.claila.com",
+                "accept": "*/*",
+                "referer": "https://www.claila.com/",
+                "user-agent": UA,
+            },
+        });
+        return res.data;
+    } catch (e) {
+        throw new Error("Gagal mengambil CSRF Token");
+    }
 }
 
 async function clailaScraper(model, message) {
     try {
         const csrfToken = await getCsrfToken();
+        
+        // Gunakan URLSearchParams agar format x-www-form-urlencoded sempurna
+        const params = new URLSearchParams();
+        params.append('calltype', 'completion');
+        params.append('message', message);
+        params.append('sessionId', Date.now().toString());
+
         const res = await axios.post(
             `https://app.claila.com/api/v2/unichat1/${model}`,
-            new URLSearchParams({
-                calltype: "completion",
-                message: message,
-                sessionId: Date.now(),
-            }),
+            params,
             {
                 headers: {
                     "authority": "app.claila.com",
                     "accept": "*/*",
                     "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "origin": "https://app.claila.com",
+                    "referer": "https://app.claila.com/chat",
                     "x-csrf-token": csrfToken,
                     "x-requested-with": "XMLHttpRequest",
-                    "user-agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36"
-                }
+                    "user-agent": UA,
+                },
             }
         );
+
+        // Jika res.data kosong, kita lempar error agar tertangkap di catch
+        if (!res.data) throw new Error("API Claila memberikan respon kosong.");
+        
         return res.data;
     } catch (error) {
-        throw new Error("Claila API Error: " + error.message);
+        throw new Error(error.response?.data?.message || error.message);
     }
 }
 
 /**
  * ENDPOINT ROUTER
- * Contoh: /api/ai/claila?text=Halo&model=gemini
  */
 router.get('/', async (req, res) => {
     const text = req.query.text;
-    let model = req.query.model || "chatgpt"; // Default ke chatgpt jika tidak diisi
+    const model = req.query.model || "chatgpt";
 
     if (!text) {
         return res.status(400).json({ 
             status: false,
             creator: "RANZZ",
-            error: "Masukkan parameter 'text' untuk bertanya." 
+            error: "Masukkan parameter 'text'!" 
         });
-    }
-
-    // Validasi apakah model tersedia
-    if (!models.includes(model)) {
-        model = "chatgpt"; 
     }
 
     try {
         const result = await clailaScraper(model, text);
         
+        // Pastikan result bukan string kosong
+        if (result === "") {
+            throw new Error("Respon dari AI kosong. Coba gunakan model lain (gemini/claude).");
+        }
+
         return res.json({
             status: true,
             creator: "RANZZ",
