@@ -6,6 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname)));
 app.use(express.json());
+// Mengaktifkan akses folder uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 /*
@@ -37,7 +38,7 @@ for (const category of endpointDirs) {
   }
 }
 
-// Utility for extracting route metadata from subrouters
+// Utility for extracting route metadata
 function getEndpointsFromRouter(category, file) {
   const endpoints = [];
   const route = require(path.join(apiPath, category, file));
@@ -96,7 +97,6 @@ router.get("/apilist", (req, res) => {
     }
   }
 
-  // Add "OTHER" for /apilist itself
   categories.push({
     name: "OTHER",
     items: [
@@ -125,6 +125,8 @@ app.get("/linkbio.json", (req, res) => {
 app.get("/styles.css", (req, res) => {
   res.sendFile(path.join(__dirname, "styles.css"));
 });
+
+// ROUTE HALAMAN UTAMA
 app.get("/", (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="id" class="dark">
@@ -134,7 +136,6 @@ app.get("/", (req, res) => {
     <title>${title}</title>
     <link rel="icon" type="image/x-icon" href="${favicon}">
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -144,10 +145,7 @@ app.get("/", (req, res) => {
                         'heading': ['"IBM Plex Mono"', 'monospace'],
                         'body': ['"IBM Plex Mono"', 'monospace'],
                     },
-                    colors: {
-                        'blackish': '#333',
-                        'whitish': '#f2f7f5',
-                    }
+                    colors: { 'blackish': '#333', 'whitish': '#f2f7f5' }
                 }
             }
         }
@@ -170,26 +168,41 @@ app.get("/", (req, res) => {
             
             <div class="text-center mb-6">
                 <img src="${logo}" alt="Profile" class="profile-img mx-auto mb-6 border-2 border-white w-43 h-43 object-cover">
-                <h1 class="text-2xl md:text-3xl font-bold font-heading mb-2">Selamat datang di ${headertitle}!</h1>
-                <p class="text-base mb-6 text-gray-300 leading-relaxed">${headerdescription}</p>
+                <h1 class="text-2xl md:text-3xl font-bold font-heading mb-2 uppercase tracking-tighter">Selamat datang di ${headertitle}!</h1>
+                <p class="text-xs mb-6 text-gray-400 leading-relaxed font-mono">${headerdescription}</p>
             </div>
 
-            <div class="grid gap-4 mb-6">
+            <div class="grid gap-4 mb-8">
                 <div class="flex flex-wrap gap-4 justify-center">
-                    <a href="/docs" class="border-2 border-white px-10 py-3 hover:bg-white hover:text-black transition-colors duration-200 inline-flex items-center gap-2 text-lg font-bold tracking-wider">
+                    <a href="/docs" class="border-2 border-white px-10 py-3 hover:bg-white hover:text-black transition-colors duration-200 inline-flex items-center gap-2 text-lg font-black tracking-widest">
                       DOCS
                     </a>
                 </div>
             </div>
 
-            <div id="socialContainer" class="flex flex-wrap justify-center gap-2">
-                <div id="socialLoading" class="text-center py-2 w-full text-sm">
-                </div>
+            <div id="socialContainer" class="flex flex-wrap justify-center gap-2 mb-8">
+                <div id="socialLoading" class="text-center py-2 w-full text-[10px] opacity-50">Loading links...</div>
                 <div id="socialError" class="text-center py-4 w-full hidden">
                     <div class="text-2xl mb-2">⚠️</div>
                     <h3 class="text-xs font-bold mb-1 uppercase tracking-wider">Link bio not available</h3>
-                    <p class="text-[10px] opacity-70">Please create <code>linkbio.json</code> file first</p>
                 </div>
+            </div>
+
+            <div class="pt-8 border-t-2 border-white/20 w-full">
+                <h3 class="text-sm font-bold mb-4 text-center tracking-[0.3em] uppercase opacity-80">Upload Media</h3>
+                <form id="uploadForm" class="space-y-4">
+                    <div class="border-2 border-dashed border-white/50 p-4 text-center hover:border-white transition-colors">
+                        <input type="file" id="fileInput" class="hidden">
+                        <label for="fileInput" class="cursor-pointer block text-[10px] uppercase font-bold tracking-widest">
+                            PILIH FILE MEDIA
+                        </label>
+                        <p id="fileNameDisplay" class="text-[9px] mt-2 opacity-50 truncate"></p>
+                    </div>
+                    <button type="submit" class="w-full border-2 border-white py-3 font-black text-xs hover:bg-white hover:text-black transition-all active:translate-y-1 tracking-[0.2em] uppercase">
+                        UNGGAH SEKARANG
+                    </button>
+                </form>
+                <div id="uploadStatus" class="mt-4 text-[9px] font-mono text-center break-all opacity-70 leading-relaxed"></div>
             </div>
             
         </div>
@@ -199,6 +212,8 @@ app.get("/", (req, res) => {
 </html>
     `);
 });
+
+// SISA KODE (Docs, etc)
 app.get("/docs", (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en" class="dark">
@@ -213,9 +228,7 @@ app.get("/docs", (req, res) => {
             darkMode: 'class',
             theme: {
                 extend: {
-                    fontFamily: {
-                        'mono': ['"IBM Plex Mono"', 'monospace'],
-                    },
+                    fontFamily: { 'mono': ['"IBM Plex Mono"', 'monospace'] },
                     colors: {
                         'blackish': '#000',
                         'whitish': '#fff',
@@ -254,95 +267,36 @@ app.get("/docs", (req, res) => {
     <div class="max-w-5xl mx-auto px-4 py-8">
         <header id="api" class="mb-12">
             <div class="mb-6 flex justify-center">
-                <img id="logoImg" src="${logo}" alt="Logo" class="w-full max-w-sm border-2 border-white light-mode:border-black">
+                <img id="logoImg" src="${logo}" alt="Logo" class="w-full max-w-sm border-2 border-white">
             </div>
-            <h1 id="mainTitle" class="text-4xl md:text-6xl font-black mb-4 leading-tight tracking-wider text-center">${headertitle}</h1>
-            <p id="mainDescription" class="text-lg font-light tracking-wide text-center">${headerdescription}</p>
-            
-            <div class="mt-8 flex flex-wrap justify-center items-center gap-4 md:gap-8">
-                <div class="border-2 border-white light-mode:border-black p-4 raised-shadow">
-                    <div class="flex flex-col items-center">
-                        <span class="text-xs font-medium mb-2">Your Battery</span>
-                        <div class="flex items-center gap-2">
-                            <div id="batteryContainer" class="battery-container">
-                                <div id="batteryLevel" class="battery-level" style="width: 0%"></div>
-                                <div class="battery-tip"></div>
-                            </div>
-                            <div class="flex flex-col items-start">
-                                <span id="batteryPercentage" class="text-sm font-bold">0%</span>
-                                <span id="batteryStatus" class="text-xs opacity-80">Detecting...</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="border-2 border-white light-mode:border-black p-4 raised-shadow">
-                    <div class="flex flex-col items-center">
-                        <span class="text-xs font-medium mb-1">Total Endpoints</span>
-                        <span id="totalEndpoints" class="text-lg font-bold">0</span>
-                    </div>
-                </div>
-                
-                <div class="border-2 border-white light-mode:border-black p-4 raised-shadow">
-                    <div class="flex flex-col items-center">
-                        <span class="text-xs font-medium mb-1">Total Categories</span>
-                        <span id="totalCategories" class="text-lg font-bold">0</span>
-                    </div>
+            <h1 class="text-4xl md:text-6xl font-black mb-4 tracking-wider text-center">${headertitle}</h1>
+            <p class="text-lg font-light tracking-wide text-center">${headerdescription}</p>
+            <div class="mt-8 flex flex-wrap justify-center items-center gap-4">
+                <div class="border-2 border-white p-4 raised-shadow">
+                    <span id="totalEndpoints" class="text-lg font-bold">0</span> Endpoints
                 </div>
             </div>
-            
-            <div class="mt-6 h-1 w-32 mx-auto bg-current"></div>
         </header>
 
         <div class="mb-8">
-            <div class="relative">
-                <input 
-                    type="text" 
-                    id="searchInput" 
-                    placeholder="Search endpoints by name, path, or category..."
-                    class="border-2 border-white light-mode:border-black bg-transparent w-full px-4 py-3 text-sm focus:outline-none focus:border-current"
-                >
-                <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
-            </div>
-        </div>
-
-        <div id="noResults" class="text-center py-12 hidden">
-            <div class="text-4xl mb-2">🔍</div>
-            <h3 class="text-sm font-bold mb-1">No endpoints found</h3>
-            <p class="text-xs">Try a different search term</p>
+            <input type="text" id="searchInput" placeholder="Search endpoints..." class="border-2 border-white bg-transparent w-full px-4 py-3 text-sm focus:outline-none">
         </div>
 
         <div id="apiList" class="space-y-4"></div>
 
-        <section id="social" class="mt-12 pt-8 border-t-2 border-white light-mode:border-black">
-            <div id="socialContainer" class="flex flex-wrap justify-center gap-3">
-                <div id="socialLoading" class="text-center py-4 w-full">
-                    <div class="spinner mx-auto"></div>
-                    <p class="text-sm mt-3">Loading link bio...</p>
-                </div>
-                <div id="socialError" class="text-center py-4 w-full hidden">
-                    <div class="text-4xl mb-2">⚠️</div>
-                    <h3 class="text-sm font-bold mb-1">Link bio not available</h3>
-                    <p class="text-xs">Please create <code>linkbio.json</code> file first</p>
-                    <p class="text-xs mt-2 opacity-80">Required format: {"link_bio": [{"name": "...", "url": "..."}]}</p>
-                </div>
-            </div>
+        <section id="social" class="mt-12 pt-8 border-t-2 border-white">
+            <div id="socialContainer" class="flex flex-wrap justify-center gap-3"></div>
         </section>
 
-        <footer id="siteFooter" class="mt-12 pt-6 border-t-2 border-white light-mode:border-black text-center text-xs">
+        <footer class="mt-12 pt-6 border-t-2 border-white text-center text-xs">
             ${footer}
         </footer>
     </div>
-
 <script src="script.js"></script>
 </body>
 </html>
     `);
 });
-
-app.use("/api", router);
 
 if (require.main === module) {
   app.listen(PORT, () => {
