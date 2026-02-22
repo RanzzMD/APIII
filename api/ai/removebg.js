@@ -2,87 +2,59 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const FormData = require('form-data');
+const multer = require('multer');
+const fs = require('fs');
+
+// Konfigurasi penyimpanan sementara
+const upload = multer({ dest: 'temp/' });
 
 /**
- * SCRAPER LOGIC - Remove Background (Fix 500)
- * Author: Ranzz
+ * SCRAPER LOGIC
  */
-async function removeBgScraper(imageUrl) {
+async function removeBgScraper(fileBuffer, fileName) {
     try {
-        // 1. Ambil gambar dari URL sebagai Buffer
-        const imageResponse = await axios.get(imageUrl, { 
-            responseType: 'arraybuffer',
-            headers: { 'User-Agent': 'Mozilla/5.0' } // Agar tidak di-block saat ambil source
-        });
-        const imageBuffer = Buffer.from(imageResponse.data, 'binary');
-
-        // 2. Siapkan Form Data dengan spesifikasi filename yang jelas
         const form = new FormData();
-        form.append("file", imageBuffer, {
-            filename: 'image.png',
-            contentType: 'image/png', // Penting agar API tidak bingung
-        });
+        form.append("file", fileBuffer, { filename: fileName, contentType: 'image/png' });
 
-        // 3. Kirim ke API Predict
-        const upload = await axios.post("https://removebg.one/api/predict/v2", form, {
+        const uploadRes = await axios.post("https://removebg.one/api/predict/v2", form, {
             headers: {
                 ...form.getHeaders(),
-                "accept": "application/json, text/plain, */*",
                 "product": "REMOVEBG",
-                "origin": "https://removebg.one",
-                "referer": "https://removebg.one/upload?trigger=yes",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                "user-agent": "Mozilla/5.0"
             }
         });
 
-        const resultUrl = upload.data?.data?.cutoutUrl;
-        
-        // Proteksi jika data tidak ditemukan (Penyebab utama 500)
-        if (!resultUrl) {
-            console.log("Response API:", upload.data); // Debug di console
-            throw new Error("Gagal: API tidak mengembalikan URL gambar.");
-        }
+        const resultUrl = uploadRes.data?.data?.cutoutUrl;
+        if (!resultUrl) throw new Error("Gagal mendapatkan URL hasil.");
 
-        // 4. Ambil hasil gambarnya
         const finalImage = await axios.get(resultUrl, { responseType: 'arraybuffer' });
-        
         return {
             buffer: Buffer.from(finalImage.data, 'binary'),
             mimetype: finalImage.headers['content-type'] || 'image/png'
         };
-
     } catch (error) {
-        // Berikan info detail error di log server
-        const msg = error.response?.data?.message || error.message;
-        throw new Error(msg);
+        throw error;
     }
 }
 
 /**
- * ENDPOINT API
+ * ENDPOINT - Pakai method POST untuk upload
  */
-router.get('/', async (req, res) => {
-    const text = req.query.text;
-
-    if (!text) return res.status(400).json({ 
-        creator: "Ranzz", 
-        error: "Masukkan parameter 'text' berisi URL gambar." 
-    });
+router.post('/', upload.single('image'), async (req, res) => {
+    if (!req.file) return res.status(400).json({ creator: "Ranzz", error: "Tidak ada file yang diunggah (field: image)" });
 
     try {
-        const result = await removeBgScraper(text);
+        const fileBuffer = fs.readFileSync(req.file.path);
+        const result = await removeBgScraper(fileBuffer, req.file.originalname);
+
+        // Hapus file temp setelah dibaca
+        fs.unlinkSync(req.file.path);
 
         res.set('Content-Type', result.mimetype);
         res.send(result.buffer);
-
     } catch (e) {
-        // Jika gagal, kirim JSON error, bukan crash 500
-        console.error("ERROR LOG:", e.message);
-        return res.status(500).json({ 
-            status: false,
-            creator: "Ranzz",
-            error: "Internal Server Error: " + e.message 
-        });
+        if (req.file) fs.unlinkSync(req.file.path);
+        res.status(500).json({ creator: "Ranzz", error: e.message });
     }
 });
 
