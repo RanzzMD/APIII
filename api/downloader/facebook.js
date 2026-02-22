@@ -20,7 +20,6 @@ class FBDown {
   }
 
   async getVideo(url) {
-    // Catatan: Token ini didapat dari source code y2date
     const token = '3ecace38ab99d0aa20f9560f0c9703787d4957d34d2a2d42bfe5b447f397e03c';
     
     const payload = qs.stringify({
@@ -36,35 +35,35 @@ class FBDown {
   }
 }
 
-// Inisialisasi Scraper
 const scraper = new FBDown();
 
 // --- API Route ---
 
 router.get('/', async (req, res) => {
-  const text = req.query.text; // URL Facebook: https://example.com/api/fb?text=URL_FB
+  // Parameter 'text' dihapus, diganti menjadi 'url'
+  const url = req.query.url; 
 
-  if (!text) {
+  if (!url) {
     return res.status(400).json({ 
       status: false, 
-      error: "Masukkan parameter 'text' berisi link video Facebook atau Reels." 
+      error: "Mana link-nya? Masukkan parameter 'url'." 
     });
   }
 
   try {
-    const result = await scraper.getVideo(text);
+    const result = await scraper.getVideo(url);
     
-    // Validasi jika data kosong atau error dari server scraper
+    // Validasi hasil
     if (!result || result.error) {
       return res.status(404).json({
         status: false,
-        error: result.error || "Gagal mendapatkan data video. Pastikan link publik."
+        error: result.error || "Data tidak ditemukan."
       });
     }
 
     const data = {
       status: true,
-      result: result
+      result: result // Output scraper langsung masuk ke sini
     };
 
     return res.json(data);
