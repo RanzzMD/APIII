@@ -820,7 +820,12 @@ document.getElementById('uploadForm')?.addEventListener('submit', async (e) => {
             body: formData
         });
         const result = await response.json();
-        status.innerText = "Sukses: " + result.fileInfo.path;
+        
+        if (result.status) {
+            status.innerHTML = `Sukses! <br> <a href="${result.fileInfo.path}" target="_blank" class="underline">Buka File</a>`;
+        } else {
+            status.innerText = "Gagal: " + (result.error || "Error");
+        }
     } catch (err) {
         status.innerText = "Gagal mengunggah file.";
     }
