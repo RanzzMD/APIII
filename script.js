@@ -829,7 +829,7 @@ document.addEventListener('DOMContentLoaded', function() {
         method: 'POST',
         body: formData
     });
-    
+
     const contentType = response.headers.get("content-type");
     if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
@@ -838,6 +838,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     const result = await response.json();
+}
 }
             if (result.status) {
                 statusDiv.innerHTML = `
