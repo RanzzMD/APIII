@@ -301,8 +301,7 @@ app.get("/docs", (req, res) => {
                     type="text" 
                     id="searchInput" 
                     placeholder="Search endpoints by name, path, or category..."
-                    class="border-2 border-white light-mode:border-black bg-transparent w-full px-4 py-3 text-sm focus:outline-none focus:border-current"
-                >
+                    class="border-2 border-white light-mode:border-black bg-transparent w-full px-4 py-3 text-sm focus:outline-none focus:border-current">
                 <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
@@ -314,11 +313,9 @@ app.get("/docs", (req, res) => {
             type="text" 
             id="searchInput" 
             placeholder="Search endpoints by name, path, or category..."
-            class="border-2 border-white light-mode:border-black bg-transparent w-full px-4 py-3 text-sm focus:outline-none focus:border-current"
-        >
+            class="border-2 border-white light-mode:border-black bg-transparent w-full px-4 py-3 text-sm focus:outline-none focus:border-current">
     </div>
 </div>
-
 <div class="mb-8 border-2 border-white p-6 raised-shadow bg-transparent">
     <div class="flex items-center gap-2 mb-4">
         <span class="text-xl">📤</span>
@@ -330,8 +327,7 @@ app.get("/docs", (req, res) => {
                 type="file" 
                 id="mediaFile" 
                 class="flex-1 text-xs border border-white p-2 file:mr-4 file:py-1 file:px-4 file:border-0 file:text-xs file:font-bold file:bg-white file:text-black hover:file:bg-gray-200 cursor-pointer"
-                required
-            >
+                required>
             <button type="submit" id="uploadBtn" class="border-2 border-white bg-white text-black px-8 py-2 font-bold text-sm hover:bg-transparent hover:text-white transition-all">
                 UPLOAD
             </button>
