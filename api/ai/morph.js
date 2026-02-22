@@ -126,7 +126,7 @@ router.get('/', async (req, res) => {
         
         return res.json({
             status: true,
-            author: "shannz",
+            author: "ranzz",
             type: type || 'img2img',
             result: result.result
         });
