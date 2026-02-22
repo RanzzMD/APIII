@@ -825,14 +825,20 @@ document.addEventListener('DOMContentLoaded', function() {
         uploadBtn.innerText = "WAIT...";
 
         try {
-            // Pastikan path ini sesuai dengan letak file scrape upload kamu
-            const response = await fetch('/api/tools/upload', { 
-                method: 'POST',
-                body: formData
-            });
-            
-            const result = await response.json();
+    const response = await fetch('/api/tools/upload', { // Pastikan path ini benar!
+        method: 'POST',
+        body: formData
+    });
+    
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Respon bukan JSON:", text);
+        throw new Error("Server mengirim respon HTML (Error 404/500). Cek console server.");
+    }
 
+    const result = await response.json();
+}
             if (result.status) {
                 statusDiv.innerHTML = `
                     <p class="text-green-400 font-bold mb-2">✅ UPLOAD SUCCESS!</p>
