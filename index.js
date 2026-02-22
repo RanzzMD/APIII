@@ -243,6 +243,22 @@ app.get("/docs", (req, res) => {
         </div>
     </div>
 
+<div class="mb-8 border-2 border-dashed border-white p-6 raised-shadow">
+    <h3 class="font-bold text-sm mb-4 uppercase tracking-widest">📤 Media Uploader (GitHub)</h3>
+    <form id="githubUploadForm" class="flex flex-col md:flex-row gap-4">
+        <input 
+            type="file" 
+            id="mediaFile" 
+            class="flex-1 text-sm file:mr-4 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-white file:text-black hover:file:bg-gray-200 cursor-pointer"
+            required
+        >
+        <button type="submit" id="uploadBtn" class="bg-white text-black px-6 py-2 font-bold text-sm hover:invert transition-all">
+            UPLOAD
+        </button>
+    </form>
+    <div id="uploadStatus" class="mt-4 text-xs break-all hidden font-mono"></div>
+</div>
+
     <button id="themeToggle" class="theme-toggle-btn" aria-label="Toggle theme">
         <svg id="theme-toggle-dark-icon" class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
             <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
