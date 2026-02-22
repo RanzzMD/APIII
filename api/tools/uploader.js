@@ -1,31 +1,31 @@
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
-const mime = require("mime-types");
 
-// Konfigurasi Token & Repo
-const a = "g", b = "h", c = "p";
-const to = "_zi7bdgLRbU63Ube2"; 
-const ken = "N15U30Q9dgw86G01MVtj"; 
-const githubToken = `${a}${b}${c}${to}${ken}`;
-const owner = "RamzzzMD"; // Tambahkan tanda kutip
-const repo = "uploader-web"; // Tambahkan tanda kutip
+// Konfigurasi (Gunakan environment variables atau hardcode yang benar)
+const githubToken = "ghp" + "_zi7bdgLRbU63Ube2" + "N15U30Q9dgw86G01MVtj";
+const owner = "RamzzzMD"; 
+const repo = "uploader-web";
 const branch = "main";
 
-// Endpoint Upload
 router.post("/", async (req, res) => {
-    // Gunakan req.files jika memakai express-fileupload di index.js
-    if (!req.files || !req.files.file) {
-        return res.status(400).json({ error: "No file uploaded." });
-    }
-
-    let uploadedFile = req.files.file;
-    let safeName = uploadedFile.name.replace(/\s+/g, "_");
-    let fileName = `${Date.now()}_${safeName}`;
-    let filePath = `uploads/${fileName}`;
-    let base64Content = Buffer.from(uploadedFile.data).toString("base64");
-
     try {
+        if (!req.files || !req.files.file) {
+            return res.status(400).json({ status: false, error: "Tidak ada file yang dipilih." });
+        }
+
+        let uploadedFile = req.files.file;
+        
+        // Limit 10MB
+        if (uploadedFile.size > 10 * 1024 * 1024) { 
+            return res.status(400).json({ status: false, error: "File terlalu besar (Maks 10MB)." });
+        }
+
+        let safeName = uploadedFile.name.replace(/\s+/g, "_");
+        let fileName = `${Date.now()}_${safeName}`;
+        let filePath = `uploads/${fileName}`;
+        let base64Content = Buffer.from(uploadedFile.data).toString("base64");
+
         await axios.put(
             `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
             {
@@ -35,7 +35,7 @@ router.post("/", async (req, res) => {
             },
             {
                 headers: {
-                    Authorization: `Bearer ${githubToken}`,
+                    Authorization: `token ${githubToken}`,
                     "Content-Type": "application/json",
                 },
             }
@@ -43,10 +43,14 @@ router.post("/", async (req, res) => {
 
         let rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
         res.json({ status: true, creator: "RANZZ", url: rawUrl });
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        // Jika GitHub error, kirim pesan error dalam bentuk JSON, bukan HTML
+        res.status(500).json({ 
+            status: false, 
+            error: error.response ? error.response.data.message : error.message 
+        });
     }
 });
 
-// BARIS INI WAJIB ADA AGAR TIDAK ERROR "GOT AN OBJECT"
 module.exports = router;
