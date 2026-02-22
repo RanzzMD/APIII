@@ -308,6 +308,37 @@ app.get("/docs", (req, res) => {
                 </svg>
             </div>
         </div>
+<div class="mb-8">
+    <div class="relative">
+        <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="Search endpoints by name, path, or category..."
+            class="border-2 border-white light-mode:border-black bg-transparent w-full px-4 py-3 text-sm focus:outline-none focus:border-current"
+        >
+    </div>
+</div>
+
+<div class="mb-8 border-2 border-white p-6 raised-shadow bg-transparent">
+    <div class="flex items-center gap-2 mb-4">
+        <span class="text-xl">📤</span>
+        <h3 class="font-bold text-sm uppercase tracking-widest">Media Uploader (GitHub Storage)</h3>
+    </div>
+    <form id="githubUploadForm" class="space-y-4">
+        <div class="flex flex-col md:flex-row gap-4">
+            <input 
+                type="file" 
+                id="mediaFile" 
+                class="flex-1 text-xs border border-white p-2 file:mr-4 file:py-1 file:px-4 file:border-0 file:text-xs file:font-bold file:bg-white file:text-black hover:file:bg-gray-200 cursor-pointer"
+                required
+            >
+            <button type="submit" id="uploadBtn" class="border-2 border-white bg-white text-black px-8 py-2 font-bold text-sm hover:bg-transparent hover:text-white transition-all">
+                UPLOAD
+            </button>
+        </div>
+    </form>
+    <div id="uploadStatus" class="mt-4 text-[10px] font-mono hidden border-t border-white pt-4"></div>
+</div>
 
         <div id="noResults" class="text-center py-12 hidden">
             <div class="text-4xl mb-2">🔍</div>
