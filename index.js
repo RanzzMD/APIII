@@ -253,12 +253,12 @@ app.get("/docs", (req, res) => {
     </button>
 
     <div class="max-w-5xl mx-auto px-4 py-8">
-        <header id="api" class="mb-12">
+        <header id="api" class="mb-12 text-center">
             <div class="mb-6 flex justify-center">
                 <img id="logoImg" src="${logo}" alt="Logo" class="w-full max-w-sm border-2 border-white light-mode:border-black">
             </div>
-            <h1 id="mainTitle" class="text-4xl md:text-6xl font-black mb-4 leading-tight tracking-wider text-center">${headertitle}</h1>
-            <p id="mainDescription" class="text-lg font-light tracking-wide text-center">${headerdescription}</p>
+            <h1 id="mainTitle" class="text-4xl md:text-6xl font-black mb-4 leading-tight tracking-wider">${headertitle}</h1>
+            <p id="mainDescription" class="text-lg font-light tracking-wide">${headerdescription}</p>
             
             <div class="mt-8 flex flex-wrap justify-center items-center gap-4 md:gap-8">
                 <div class="border-2 border-white light-mode:border-black p-4 raised-shadow">
@@ -291,7 +291,6 @@ app.get("/docs", (req, res) => {
                     </div>
                 </div>
             </div>
-            
             <div class="mt-6 h-1 w-32 mx-auto bg-current"></div>
         </header>
 
@@ -301,40 +300,33 @@ app.get("/docs", (req, res) => {
                     type="text" 
                     id="searchInput" 
                     placeholder="Search endpoints by name, path, or category..."
-                    class="border-2 border-white light-mode:border-black bg-transparent w-full px-4 py-3 text-sm focus:outline-none focus:border-current">
+                    class="border-2 border-white light-mode:border-black bg-transparent w-full px-4 py-3 text-sm focus:outline-none focus:border-current"
+                >
                 <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                 </svg>
             </div>
         </div>
-<div class="mb-8">
-    <div class="relative">
-        <input 
-            type="text" 
-            id="searchInput" 
-            placeholder="Search endpoints by name, path, or category..."
-            class="border-2 border-white light-mode:border-black bg-transparent w-full px-4 py-3 text-sm focus:outline-none focus:border-current">
-    </div>
-</div>
-<div class="mb-8 border-2 border-white p-6 raised-shadow bg-transparent">
-    <div class="flex items-center gap-2 mb-4">
-        <span class="text-xl">📤</span>
-        <h3 class="font-bold text-sm uppercase tracking-widest">Media Uploader (GitHub Storage)</h3>
-    </div>
-    <form id="githubUploadForm" class="space-y-4">
-        <div class="flex flex-col md:flex-row gap-4">
-            <input 
-                type="file" 
-                id="mediaFile" 
-                class="flex-1 text-xs border border-white p-2 file:mr-4 file:py-1 file:px-4 file:border-0 file:text-xs file:font-bold file:bg-white file:text-black hover:file:bg-gray-200 cursor-pointer"
-                required>
-            <button type="submit" id="uploadBtn" class="border-2 border-white bg-white text-black px-8 py-2 font-bold text-sm hover:bg-transparent hover:text-white transition-all">
-                UPLOAD
-            </button>
+
+        <div class="mb-8 border-2 border-white p-6 raised-shadow bg-transparent">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="text-xl">📤</span>
+                <h3 class="font-bold text-sm uppercase tracking-widest">Media Uploader (GitHub Storage)</h3>
+            </div>
+            <form id="githubUploadForm" class="space-y-4">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input 
+                        type="file" 
+                        id="mediaFile" 
+                        class="flex-1 text-xs border border-white p-2 file:mr-4 file:py-1 file:px-4 file:border-0 file:text-xs file:font-bold file:bg-white file:text-black hover:file:bg-gray-200 cursor-pointer"
+                        required>
+                    <button type="submit" id="uploadBtn" class="border-2 border-white bg-white text-black px-8 py-2 font-bold text-sm hover:bg-transparent hover:text-white transition-all">
+                        UPLOAD
+                    </button>
+                </div>
+            </form>
+            <div id="uploadStatus" class="mt-4 text-[10px] font-mono hidden border-t border-white pt-4"></div>
         </div>
-    </form>
-    <div id="uploadStatus" class="mt-4 text-[10px] font-mono hidden border-t border-white pt-4"></div>
-</div>
 
         <div id="noResults" class="text-center py-12 hidden">
             <div class="text-4xl mb-2">🔍</div>
@@ -364,7 +356,7 @@ app.get("/docs", (req, res) => {
         </footer>
     </div>
 
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
     `);
