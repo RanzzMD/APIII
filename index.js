@@ -4,19 +4,21 @@ const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Pastikan folder uploads tersedia secara otomatis
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
 app.use(express.static(path.join(__dirname)));
 app.use(express.json());
-// Mengaktifkan akses folder uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadDir));
 
-/*
-For setting API name etc
-*/
+/* --- KONFIGURASI TAMPILAN --- */
 const title = "RANZZ API";
-const favicon =
-  "https://raw.githubusercontent.com/RamzzzMD/tes-aja-lah/refs/heads/main/reply.jpg";
-const logo =
-  "https://raw.githubusercontent.com/RamzzzMD/tes-aja-lah/refs/heads/main/ChatGPT%20Image%20Feb%2022%2C%202026%2C%2010_35_52%20AM.png";
+const favicon = "https://raw.githubusercontent.com/RamzzzMD/tes-aja-lah/refs/heads/main/reply.jpg";
+const logo = "https://raw.githubusercontent.com/RamzzzMD/tes-aja-lah/refs/heads/main/ChatGPT%20Image%20Feb%2022%2C%202026%2C%2010_35_52%20AM.png";
 const headertitle = "REST API";
 const headerdescription = "Kumpulan API Endpoint yang mungkin berguna.";
 const footer = "© RANZZ";
@@ -24,284 +26,141 @@ const footer = "© RANZZ";
 // Dynamically load all routes
 const router = express.Router();
 const apiPath = path.join(__dirname, "api");
-const endpointDirs = fs
-  .readdirSync(apiPath)
-  .filter((f) => fs.statSync(path.join(apiPath, f)).isDirectory());
-
-for (const category of endpointDirs) {
-  const categoryPath = path.join(apiPath, category);
-  const files = fs.readdirSync(categoryPath).filter((f) => f.endsWith(".js"));
-  for (const file of files) {
-    const routeName = path.basename(file, ".js");
-    const route = require(path.join(categoryPath, file));
-    router.use(`/${category}/${routeName}`, route);
-  }
+if (fs.existsSync(apiPath)) {
+    const endpointDirs = fs.readdirSync(apiPath).filter((f) => fs.statSync(path.join(apiPath, f)).isDirectory());
+    for (const category of endpointDirs) {
+        const categoryPath = path.join(apiPath, category);
+        const files = fs.readdirSync(categoryPath).filter((f) => f.endsWith(".js"));
+        for (const file of files) {
+            const route = require(path.join(categoryPath, file));
+            router.use(`/${category}/${path.basename(file, ".js")}`, route);
+        }
+    }
 }
 
-// Utility for extracting route metadata
+// Utility untuk metadata /apilist
 function getEndpointsFromRouter(category, file) {
-  const endpoints = [];
-  const route = require(path.join(apiPath, category, file));
-  const subRouter = route.stack ? route : route.router || route;
-  if (!subRouter || !subRouter.stack) return endpoints;
-  subRouter.stack.forEach((layer) => {
-    if (layer.route) {
-      const methods = Object.keys(layer.route.methods).map((m) =>
-        m.toUpperCase(),
-      );
-      let params = {};
-      if (layer.route.stack && layer.route.stack.length) {
-        layer.route.stack.forEach((mw) => {
-          const fnString = mw.handle.toString();
-          [...fnString.matchAll(/req\.query\.([a-zA-Z0-9_]+)/g)].forEach(
-            (match) => {
-              params[match[1]] = "";
-            },
-          );
-          [...fnString.matchAll(/req\.body\.([a-zA-Z0-9_]+)/g)].forEach(
-            (match) => {
-              params[match[1]] = "";
-            },
-          );
+    const endpoints = [];
+    try {
+        const route = require(path.join(apiPath, category, file));
+        const subRouter = route.stack ? route : route.router || route;
+        if (!subRouter || !subRouter.stack) return endpoints;
+        subRouter.stack.forEach((layer) => {
+            if (layer.route) {
+                endpoints.push({
+                    name: `/${category}/${file.replace(/\.js$/, "")}`,
+                    path: `/api/${category}/${file.replace(/\.js$/, "")}`,
+                    desc: `Endpoint: ${category} - ${file.replace(/\.js$/, "")}`,
+                    status: "ready",
+                    methods: Object.keys(layer.route.methods).map(m => m.toUpperCase())
+                });
+            }
         });
-      }
-      endpoints.push({
-        name: `/${category}/${file.replace(/\.js$/, "")}`,
-        path: `/api/${category}/${file.replace(/\.js$/, "")}`,
-        desc: `/${category}/${file.replace(/\.js$/, "")}`,
-        status: "ready",
-        params,
-        methods,
-      });
-    }
-  });
-  return endpoints;
+    } catch (e) { console.error(e); }
+    return endpoints;
 }
 
 router.get("/apilist", (req, res) => {
-  const categories = [];
-
-  for (const category of endpointDirs) {
-    const files = fs
-      .readdirSync(path.join(apiPath, category))
-      .filter((f) => f.endsWith(".js"));
-    const endpoints = [];
-    for (const file of files) {
-      endpoints.push(...getEndpointsFromRouter(category, file));
+    const categories = [];
+    if (fs.existsSync(apiPath)) {
+        const endpointDirs = fs.readdirSync(apiPath).filter((f) => fs.statSync(path.join(apiPath, f)).isDirectory());
+        for (const category of endpointDirs) {
+            const files = fs.readdirSync(path.join(apiPath, category)).filter(f => f.endsWith(".js"));
+            const items = [];
+            files.forEach(file => items.push(...getEndpointsFromRouter(category, file)));
+            if (items.length) categories.push({ name: `${category.toUpperCase()} ENDPOINT`, items });
+        }
     }
-    if (endpoints.length) {
-      categories.push({
-        name: `${category.toUpperCase()} API ENDPOINT`,
-        items: endpoints,
-      });
-    }
-  }
-
-  categories.push({
-    name: "OTHER",
-    items: [
-      {
-        name: "/apilist",
-        path: "/api/apilist",
-        desc: "/apilist",
-        status: "ready",
-        params: {},
-        methods: ["GET"],
-      },
-    ],
-  });
-
-  res.json({ categories });
+    res.json({ categories });
 });
 
 app.use("/api", router);
 
-app.get("/script.js", (req, res) => {
-  res.sendFile(path.join(__dirname, "script.js"));
-});
-app.get("/linkbio.json", (req, res) => {
-  res.sendFile(path.join(__dirname, "linkbio.json"));
-});
-app.get("/styles.css", (req, res) => {
-  res.sendFile(path.join(__dirname, "styles.css"));
-});
-
-// ROUTE HALAMAN UTAMA
+/* --- HALAMAN UTAMA (/) --- */
 app.get("/", (req, res) => {
-  res.send(`<!DOCTYPE html>
+    res.send(`<!DOCTYPE html>
 <html lang="id" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${title}</title>
-    <link rel="icon" type="image/x-icon" href="${favicon}">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        'heading': ['"IBM Plex Mono"', 'monospace'],
-                        'body': ['"IBM Plex Mono"', 'monospace'],
-                    },
-                    colors: { 'blackish': '#333', 'whitish': '#f2f7f5' }
-                }
-            }
-        }
-    </script>
-   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-   <link rel="stylesheet" href="styles.css" />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="font-body bg-black text-white min-h-screen">
-    <button id="themeToggle" class="theme-toggle-btn">
-        <svg id="theme-toggle-dark-icon" class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
-        </svg>
-        <svg id="theme-toggle-light-icon" class="w-5 h-5 text-black hidden" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z"></path>
-        </svg>
-    </button>
+<body class="bg-black text-white font-mono p-4">
+    <main class="max-w-xl mx-auto border-2 border-white p-6 raised-shadow mt-10">
+        <div class="text-center mb-10">
+            <img src="${logo}" class="w-32 h-32 mx-auto border-2 border-white mb-6 object-cover">
+            <h1 class="text-2xl font-bold uppercase">${headertitle}</h1>
+            <p class="text-[10px] opacity-60">${headerdescription}</p>
+        </div>
 
-    <main class="container mx-auto px-6 py-12 flex items-center justify-center min-h-screen">
-        <div class="border-2 border-white p-6 md:p-10 raised-shadow w-full max-w-lg">
-            
-            <div class="text-center mb-6">
-                <img src="${logo}" alt="Profile" class="profile-img mx-auto mb-6 border-2 border-white w-43 h-43 object-cover">
-                <h1 class="text-2xl md:text-3xl font-bold font-heading mb-2 uppercase tracking-tighter">Selamat datang di ${headertitle}!</h1>
-                <p class="text-xs mb-6 text-gray-400 leading-relaxed font-mono">${headerdescription}</p>
-            </div>
+        <div class="flex justify-center gap-4 mb-10">
+            <a href="/docs" class="border-2 border-white px-8 py-2 hover:bg-white hover:text-black font-bold uppercase transition-all">DOKUMENTASI</a>
+        </div>
 
-            <div class="grid gap-4 mb-8">
-                <div class="flex flex-wrap gap-4 justify-center">
-                    <a href="/docs" class="border-2 border-white px-10 py-3 hover:bg-white hover:text-black transition-colors duration-200 inline-flex items-center gap-2 text-lg font-black tracking-widest">
-                      DOCS
-                    </a>
-                </div>
-            </div>
+        <div class="mb-10 p-4 border-2 border-dashed border-white/30 bg-white/5">
+            <h3 class="text-xs font-bold mb-4 text-center uppercase tracking-widest">Upload Media</h3>
+            <form id="uploadForm" class="space-y-4">
+                <input type="file" id="fileInput" class="text-[10px] w-full file:bg-white file:text-black file:border-0 file:px-2 cursor-pointer">
+                <button type="submit" class="w-full bg-white text-black font-bold py-2 text-xs uppercase hover:bg-gray-200 transition-all">UNGGAH FILE</button>
+            </form>
+            <div id="uploadStatus" class="text-[9px] mt-2 text-center break-all opacity-70"></div>
+        </div>
 
-            <div id="socialContainer" class="flex flex-wrap justify-center gap-2 mb-8">
-                <div id="socialLoading" class="text-center py-2 w-full text-[10px] opacity-50">Loading links...</div>
-                <div id="socialError" class="text-center py-4 w-full hidden">
-                    <div class="text-2xl mb-2">⚠️</div>
-                    <h3 class="text-xs font-bold mb-1 uppercase tracking-wider">Link bio not available</h3>
-                </div>
-            </div>
+        <h3 class="text-xs font-bold mb-4 uppercase tracking-widest border-b border-white/20 pb-2">Fitur Tersedia</h3>
+        <div id="apiList" class="space-y-3">
+            <div class="text-center py-6 opacity-30 animate-pulse text-[10px]">Menghubungkan...</div>
+        </div>
 
-            <div class="pt-8 border-t-2 border-white/20 w-full">
-                <h3 class="text-sm font-bold mb-4 text-center tracking-[0.3em] uppercase opacity-80">Upload Media</h3>
-                <form id="uploadForm" class="space-y-4">
-                    <div class="border-2 border-dashed border-white/50 p-4 text-center hover:border-white transition-colors">
-                        <input type="file" id="fileInput" class="hidden">
-                        <label for="fileInput" class="cursor-pointer block text-[10px] uppercase font-bold tracking-widest">
-                            PILIH FILE MEDIA
-                        </label>
-                        <p id="fileNameDisplay" class="text-[9px] mt-2 opacity-50 truncate"></p>
-                    </div>
-                    <button type="submit" class="w-full border-2 border-white py-3 font-black text-xs hover:bg-white hover:text-black transition-all active:translate-y-1 tracking-[0.2em] uppercase">
-                        UNGGAH SEKARANG
-                    </button>
-                </form>
-                <div id="uploadStatus" class="mt-4 text-[9px] font-mono text-center break-all opacity-70 leading-relaxed"></div>
-            </div>
-            
+        <div class="hidden">
+            <span id="totalEndpoints">0</span><span id="totalCategories">0</span>
+            <div id="batteryLevel"></div><span id="batteryPercentage"></span><span id="batteryStatus"></span><div id="batteryContainer"></div>
+            <div id="socialContainer"></div><input type="text" id="searchInput">
+            <button id="themeToggle"></button><div id="toast"><span id="toastMessage"></span><div id="toastIcon"></div></div>
         </div>
     </main>
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
-</html>
-    `);
+</html>`);
 });
 
-// SISA KODE (Docs, etc)
+/* --- HALAMAN DOKUMENTASI (/docs) --- */
 app.get("/docs", (req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>${title}</title>
-    <link id="faviconLink" rel="icon" type="image/x-icon" href="${favicon}">
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>${title} - Docs</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { 'mono': ['"IBM Plex Mono"', 'monospace'] },
-                    colors: {
-                        'blackish': '#000',
-                        'whitish': '#fff',
-                        'api-green': '#10b981',
-                        'api-blue': '#3b82f6',
-                        'api-ready': '#22c55e',
-                        'api-update': '#f59e0b',
-                        'api-error': '#ef4444',
-                    }
-                }
-            }
-        }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css" />
 </head>
-<body class="font-mono bg-black text-white min-h-screen">
-    <div id="toast" class="toast">
-        <div class="flex items-center gap-3">
-            <svg id="toastIcon" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-            </svg>
-            <span id="toastMessage" class="font-medium">Action completed</span>
-        </div>
-    </div>
+<body class="bg-black text-white font-mono min-h-screen p-4">
+    <div id="toast" class="toast"><div class="flex items-center gap-3"><span id="toastIcon"></span><span id="toastMessage">Action completed</span></div></div>
+    
+    <button id="themeToggle" class="theme-toggle-btn border-2 border-white p-2">🌓</button>
 
-    <button id="themeToggle" class="theme-toggle-btn" aria-label="Toggle theme">
-        <svg id="theme-toggle-dark-icon" class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
-        </svg>
-        <svg id="theme-toggle-light-icon" class="w-5 h-5 text-black hidden" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path>
-        </svg>
-    </button>
-
-    <div class="max-w-5xl mx-auto px-4 py-8">
-        <header id="api" class="mb-12">
-            <div class="mb-6 flex justify-center">
-                <img id="logoImg" src="${logo}" alt="Logo" class="w-full max-w-sm border-2 border-white">
-            </div>
-            <h1 class="text-4xl md:text-6xl font-black mb-4 tracking-wider text-center">${headertitle}</h1>
-            <p class="text-lg font-light tracking-wide text-center">${headerdescription}</p>
-            <div class="mt-8 flex flex-wrap justify-center items-center gap-4">
-                <div class="border-2 border-white p-4 raised-shadow">
-                    <span id="totalEndpoints" class="text-lg font-bold">0</span> Endpoints
+    <main class="max-w-5xl mx-auto py-10">
+        <header class="mb-12 text-center border-2 border-white p-8 raised-shadow">
+            <img src="${logo}" class="w-32 h-32 mx-auto mb-6 border-2 border-white">
+            <h1 class="text-4xl font-black mb-4 uppercase">${headertitle}</h1>
+            <div class="flex flex-wrap justify-center gap-6 mt-6">
+                <div class="border-2 border-white p-3 flex items-center gap-2">
+                    <div id="batteryContainer" class="w-10 h-4 border border-white relative"><div id="batteryLevel" class="bg-white h-full" style="width: 0%"></div></div>
+                    <span id="batteryPercentage" class="text-xs font-bold">0%</span>
                 </div>
+                <div class="border-2 border-white p-3 text-xs uppercase font-bold text-center">EP: <span id="totalEndpoints">0</span></div>
             </div>
         </header>
 
-        <div class="mb-8">
-            <input type="text" id="searchInput" placeholder="Search endpoints..." class="border-2 border-white bg-transparent w-full px-4 py-3 text-sm focus:outline-none">
-        </div>
-
+        <div class="mb-8"><input type="text" id="searchInput" placeholder="Search endpoints..." class="w-full bg-transparent border-2 border-white p-3 text-sm focus:outline-none"></div>
         <div id="apiList" class="space-y-4"></div>
-
-        <section id="social" class="mt-12 pt-8 border-t-2 border-white">
-            <div id="socialContainer" class="flex flex-wrap justify-center gap-3"></div>
-        </section>
-
-        <footer class="mt-12 pt-6 border-t-2 border-white text-center text-xs">
-            ${footer}
-        </footer>
-    </div>
-<script src="script.js"></script>
+        <div id="socialContainer" class="mt-12 flex justify-center gap-3 border-t-2 border-white pt-8"></div>
+        <footer class="mt-12 text-center text-[10px] opacity-50">${footer}</footer>
+    </main>
+    <script src="script.js"></script>
 </body>
-</html>
-    `);
+</html>`);
 });
 
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
-
-module.exports = app;
+app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
