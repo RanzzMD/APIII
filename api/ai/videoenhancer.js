@@ -87,18 +87,17 @@ async function pollJob(jobId) {
 }
 
 /**
- * ENDPOINT API
- * Mendukung URL via query ?video=... atau Upload via field 'video'
+ * ENDPOINT API - Hybrid (GET/POST)
  */
 router.all('/', upload.single('video'), async (req, res) => {
-    // 1. Ambil input dari URL (query) atau File Upload
+    // Ambil input dari URL query (?video=...) atau File Upload
     const videoInput = req.query.video || req.body.video || (req.file ? req.file.path : null);
     const resolution = req.query.resolution || '4k';
 
     if (!videoInput) {
         return res.status(400).json({ 
-            creator: "Ranzz", 
-            error: "Harap masukkan URL video di parameter 'video' atau unggah file." 
+            creator: "RANZZ", 
+            error: "Harap masukkan URL video atau unggah file." 
         });
     }
 
@@ -106,7 +105,7 @@ router.all('/', upload.single('video'), async (req, res) => {
     let activePath = req.file ? req.file.path : tempPath;
 
     try {
-        // 2. Jika input adalah URL, download ke /tmp dulu
+        // Jika input berupa URL, download dulu ke /tmp
         if (typeof videoInput === 'string' && videoInput.startsWith('http')) {
             const response = await axios.get(videoInput, { responseType: 'stream' });
             const writer = fs.createWriteStream(tempPath);
@@ -117,7 +116,6 @@ router.all('/', upload.single('video'), async (req, res) => {
             });
         }
 
-        // 3. Jalankan Scraper Workflow
         const uploadData = await uploadvid(activePath);
         await putoOss(uploadData.url, activePath);
         
@@ -125,13 +123,13 @@ router.all('/', upload.single('video'), async (req, res) => {
         const jobId = await createJob(cdnUrl, resolution);
         const finalResult = await pollJob(jobId);
 
-        // 4. Cleanup file temporary (Perbaikan Syntax di sini)
+        // Cleanup: Hapus file temporary agar /tmp Vercel tidak penuh
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
         return res.json({
             status: true,
-            creator: "Ranzz",
+            creator: "RANZZ",
             result: {
                 job_id: jobId,
                 input_url: finalResult.input_url,
@@ -140,12 +138,11 @@ router.all('/', upload.single('video'), async (req, res) => {
         });
 
     } catch (e) {
-        // Perbaikan Syntax Cleanup di blok catch
+        // Cleanup di blok catch untuk mencegah kebocoran storage
         if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         
-        console.error("Enhancer Error:", e.message);
-        return res.status(500).json({ status: false, creator: "Ranzz", error: e.message });
+        return res.status(500).json({ status: false, creator: "RANZZ", error: e.message });
     }
 });
 
