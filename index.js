@@ -6,6 +6,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 app.use(express.static(path.join(__dirname)));
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 /*
 For setting API name etc
@@ -180,6 +181,20 @@ app.get("/", (req, res) => {
                     </a>
                 </div>
             </div>
+            
+            <div class="mb-8 p-4 border-2 border-white light-mode:border-black raised-shadow bg-transparent">
+    <h3 class="text-xs font-bold mb-3 uppercase tracking-widest text-center">Upload Media</h3>
+    <form id="uploadForm" class="space-y-4">
+        <div class="relative border-2 border-dashed border-gray-500 p-4 text-center hover:border-white transition-colors">
+            <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+            <div id="fileLabel" class="text-xs opacity-70">Klik atau seret file ke sini</div>
+        </div>
+        <button type="submit" class="w-full border-2 border-white py-2 text-xs font-bold hover:bg-white hover:text-black transition-all uppercase">
+            Upload ke Server
+        </button>
+    </form>
+    <div id="uploadStatus" class="mt-3 text-[10px] text-center font-mono break-all text-api-green"></div>
+</div>
 
             <div id="socialContainer" class="flex flex-wrap justify-center gap-2">
                 <div id="socialLoading" class="text-center py-2 w-full text-sm">
