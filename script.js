@@ -802,17 +802,30 @@ window.addEventListener('beforeunload', function() {
     }
 });
 
+// Update label file saat dipilih
+document.getElementById('fileInput')?.addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name || "Klik atau seret file ke sini";
+    document.getElementById('fileLabel').innerText = fileName;
+});
+
+// Handle Upload
 document.getElementById('uploadForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fileInput = document.getElementById('fileInput');
     const status = document.getElementById('uploadStatus');
+    const submitBtn = e.target.querySelector('button');
     
-    if (!fileInput.files[0]) return alert("Pilih file dulu, Ranzz!");
+    if (!fileInput.files[0]) {
+        showToast("Pilih file dulu, Ranzz!", true);
+        return;
+    }
 
     const formData = new FormData();
     formData.append('file', fileInput.files[0]);
 
     status.innerText = "Sedang mengunggah...";
+    submitBtn.disabled = true;
+    submitBtn.innerText = "UPLOADING...";
     
     try {
         const response = await fetch('/api/tools/upload', {
@@ -820,8 +833,20 @@ document.getElementById('uploadForm')?.addEventListener('submit', async (e) => {
             body: formData
         });
         const result = await response.json();
-        status.innerText = "Sukses: " + result.fileInfo.path;
+        
+        if(result.status) {
+            status.innerHTML = `Sukses! <a href="${result.fileInfo.path}" target="_blank" class="underline">Buka File</a>`;
+            showToast("File berhasil diunggah!");
+            fileInput.value = ''; // Reset input
+            document.getElementById('fileLabel').innerText = "Klik atau seret file ke sini";
+        } else {
+            status.innerText = "Gagal: " + result.message;
+        }
     } catch (err) {
         status.innerText = "Gagal mengunggah file.";
+        showToast("Server error!", true);
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "Upload ke Server";
     }
 });
