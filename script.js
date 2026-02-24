@@ -802,64 +802,78 @@ window.addEventListener('beforeunload', function() {
     }
 });
 
-document.addEventListener('DOMContentLoaded', function() {
-    // ... kode yang sudah ada ...
+document.getElementById('uploadForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('uploadStatus');
+    
+    if (!fileInput.files[0]) return alert("Pilih file dulu, Ranzz!");
 
-    const uploadForm = document.getElementById('githubUploadForm');
-    const statusDiv = document.getElementById('uploadStatus');
-    const uploadBtn = document.getElementById('uploadBtn');
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
 
-    uploadForm?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fileInput = document.getElementById('mediaFile');
-        
-        if (!fileInput.files[0]) return;
-
-        const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
-
-        // Loading State
-        statusDiv.classList.remove('hidden');
-        statusDiv.innerHTML = `<span class="text-yellow-400">⚡ PROCESSING: Mengunggah file ke database GitHub...</span>`;
-        uploadBtn.disabled = true;
-        uploadBtn.innerText = "WAIT...";
-        
-        try {
-    const response = await fetch('/api/tools/upload', { // Pastikan path ini benar!
-        method: 'POST',
-        body: formData
-    });
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-        console.error("Respon bukan JSON:", text);
-        throw new Error("Server mengirim respon HTML (Error 404/500). Cek console server.");
+    status.innerText = "Sedang mengunggah...";
+    
+    try {
+        const response = await fetch('/api/tools/upload', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        status.innerText = "Sukses: " + result.fileInfo.path;
+    } catch (err) {
+        status.innerText = "Gagal mengunggah file.";
     }
+});
 
-    const result = await response.json();
-}
-}
-            if (result.status) {
-                statusDiv.innerHTML = `
-                    <p class="text-green-400 font-bold mb-2">✅ UPLOAD SUCCESS!</p>
-                    <div class="p-3 border border-dashed border-green-400 bg-green-400/5">
-                        <p class="text-white mb-2">RAW URL:</p>
-                        <code class="break-all text-blue-300 text-[10px]">${result.url}</code>
+document.getElementById('githubUploadForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fileInput = document.getElementById('mediaFile');
+    const status = document.getElementById('uploadStatus');
+    const uploadBtn = document.getElementById('uploadBtn');
+    
+    if (!fileInput.files[0]) return showToast("Pilih file dulu, Ranzz!", true);
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    // Tampilkan status loading
+    status.classList.remove('hidden');
+    status.innerHTML = `
+        <div class="flex items-center gap-2">
+            <div class="local-spinner active"></div>
+            <span>Sedang mengunggah ke GitHub...</span>
+        </div>
+    `;
+    uploadBtn.disabled = true;
+    
+    try {
+        const response = await fetch('/api/tools/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            status.innerHTML = `
+                <div class="space-y-2">
+                    <p class="text-api-ready font-bold">✅ BERHASIL DIUNGGAH KE GITHUB</p>
+                    <div class="flex gap-2">
+                        <input type="text" value="${result.url}" class="bg-transparent border border-white p-2 flex-1 text-[10px] focus:outline-none" readonly id="resUrl">
+                        <button onclick="copyText('${result.url}', 'URL')" class="border border-white px-4 hover:bg-white hover:text-black font-bold transition-all">COPY</button>
                     </div>
-                    <div class="mt-3 flex gap-2">
-                        <button onclick="copyText('${result.url}', 'URL')" class="border border-white px-3 py-1 hover:bg-white hover:text-black">COPY LINK</button>
-                        <a href="${result.url}" target="_blank" class="border border-white px-3 py-1 hover:bg-white hover:text-black text-center">VIEW FILE</a>
-                    </div>
-                `;
-            } else {
-                throw new Error(result.error || "Gagal mengunggah");
-            }
-        } catch (err) {
-            statusDiv.innerHTML = `<span class="text-red-500">❌ ERROR: ${err.message}</span>`;
-        } finally {
-            uploadBtn.disabled = false;
-            uploadBtn.innerText = "UPLOAD";
+                    <p class="text-[9px] opacity-60">File tersimpan permanen di repositori Anda.</p>
+                </div>
+            `;
+            showToast("Berhasil diunggah!");
+        } else {
+            throw new Error(result.error || "Gagal mengunggah");
         }
-    });
+    } catch (err) {
+        status.innerHTML = `<p class="text-api-error">❌ Gagal: ${err.message}</p>`;
+        showToast(err.message, true);
+    } finally {
+        uploadBtn.disabled = false;
+    }
 });

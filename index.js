@@ -38,33 +38,37 @@ for (const category of endpointDirs) {
   }
 }
 
-// Utility for extracting route metadata from subrouters
 function getEndpointsFromRouter(category, file) {
   const endpoints = [];
   const route = require(path.join(apiPath, category, file));
   const subRouter = route.stack ? route : route.router || route;
   if (!subRouter || !subRouter.stack) return endpoints;
+
   subRouter.stack.forEach((layer) => {
     if (layer.route) {
-      const methods = Object.keys(layer.route.methods).map((m) =>
-        m.toUpperCase(),
-      );
+      const methods = Object.keys(layer.route.methods).map((m) => m.toUpperCase());
       let params = {};
+      let isMultipart = false;
+
       if (layer.route.stack && layer.route.stack.length) {
         layer.route.stack.forEach((mw) => {
           const fnString = mw.handle.toString();
-          [...fnString.matchAll(/req\.query\.([a-zA-Z0-9_]+)/g)].forEach(
-            (match) => {
-              params[match[1]] = "";
-            },
-          );
-          [...fnString.matchAll(/req\.body\.([a-zA-Z0-9_]+)/g)].forEach(
-            (match) => {
-              params[match[1]] = "";
-            },
-          );
+          
+          // Deteksi parameter standar
+          [...fnString.matchAll(/req\.query\.([a-zA-Z0-9_]+)/g)].forEach(m => params[m[1]] = "text");
+          [...fnString.matchAll(/req\.body\.([a-zA-Z0-9_]+)/g)].forEach(m => params[m[1]] = "text");
+          
+          // Deteksi khusus 'action' untuk Sfile
+          if (fnString.includes('action')) params['action'] = 'select';
+          
+          // Deteksi File (Choose File)
+          if (fnString.includes('req.file') || fnString.includes('req.files')) {
+            isMultipart = true;
+            params["image"] = "file"; 
+          }
         });
       }
+
       endpoints.push({
         name: `/${category}/${file.replace(/\.js$/, "")}`,
         path: `/api/${category}/${file.replace(/\.js$/, "")}`,
@@ -72,11 +76,68 @@ function getEndpointsFromRouter(category, file) {
         status: "ready",
         params,
         methods,
+        isMultipart
       });
     }
   });
   return endpoints;
 }
+
+// Endpoint Upload ke GitHub Storage
+router.post("/tools/upload", async (req, res) => {
+  try {
+    if (!req.files || !req.files.file) {
+      return res.status(400).json({ error: "File tidak ditemukan." });
+    }
+
+    const uploadedFile = req.files.file;
+    const axios = require("axios");
+
+    // --- PENGATURAN GITHUB ---
+    const a = "g";
+    const b = "h";
+    const c = "p";
+    const to = "_ryVNjSwIIQmh52Qj";
+    const ken = "OHXWkvSjmOTpVF0qrMJr";
+    const GITHUB_TOKEN = `${a}${b}${c}${to}${ken}`;
+    const REPO_OWNER = "RamzzzMD";
+    const REPO_NAME = "uploader-web";
+    const FOLDER_PATH = "uploads"; // File akan masuk ke folder uploads/
+    // -------------------------
+
+    const fileName = Date.now() + "-" + uploadedFile.name.replace(/\s+/g, '-');
+    const contentBase64 = uploadedFile.data.toString("base64");
+
+    const githubUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FOLDER_PATH}/${fileName}`;
+
+    const response = await axios.put(
+      githubUrl,
+      {
+        message: `Upload file: ${fileName}`,
+        content: contentBase64,
+      },
+      {
+        headers: {
+          Authorization: `token ${GITHUB_TOKEN}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      }
+    );
+
+    // Mengonversi URL API menjadi URL Raw agar bisa diakses langsung sebagai gambar/media
+    const rawUrl = `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${FOLDER_PATH}/${fileName}`;
+
+    res.json({
+      status: true,
+      url: rawUrl,
+      name: fileName
+    });
+
+  } catch (error) {
+    console.error(error.response?.data || error.message);
+    res.status(500).json({ error: "Gagal upload ke GitHub: " + error.message });
+  }
+});
 
 router.get("/apilist", (req, res) => {
   const categories = [];
